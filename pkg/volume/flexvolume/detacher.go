@@ -19,7 +19,6 @@ package flexvolume
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/types"
@@ -47,16 +46,9 @@ func (d *flexVolumeDetacher) Detach(volumeName string, hostName types.NodeName) 
 	return err
 }
 
-// WaitForDetach is part of the volume.Detacher interface.
-func (d *flexVolumeDetacher) WaitForDetach(devicePath string, timeout time.Duration) error {
-	call := d.plugin.NewDriverCallWithTimeout(waitForDetachCmd, timeout)
-	call.Append(devicePath)
-
-	_, err := call.Run()
-	if isCmdNotSupportedErr(err) {
-		return (*detacherDefaults)(d).WaitForDetach(devicePath, timeout)
-	}
-	return err
+// SafeToDetachFromNode returns true if it is safe to detach drive from node immediately
+func (d *flexVolumeDetacher) SafeToDetachFromNode(nodeName types.NodeName) (bool, error) {
+	return false, nil
 }
 
 // UnmountDevice is part of the volume.Detacher interface.
