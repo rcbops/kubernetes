@@ -83,6 +83,8 @@ const (
 	MaxGCEPDVolumeCountPred = "MaxGCEPDVolumeCount"
 	// MaxAzureDiskVolumeCountPred defines the name of predicate MaxAzureDiskVolumeCount.
 	MaxAzureDiskVolumeCountPred = "MaxAzureDiskVolumeCount"
+	// MaxCinderVolumeCountPred defines the name of predicate MaxCinderVolumeCount.
+	MaxCinderVolumeCountPred = "MaxCinderVolumeCount"
 	// NoVolumeZoneConflictPred defines the name of predicate NoVolumeZoneConflict.
 	NoVolumeZoneConflictPred = "NoVolumeZoneConflict"
 	// CheckNodeMemoryPressurePred defines the name of predicate CheckNodeMemoryPressure.
@@ -101,6 +103,9 @@ const (
 	// Larger Azure VMs can actually have much more disks attached.
 	// TODO We should determine the max based on VM size
 	DefaultMaxAzureDiskVolumes = 16
+	// DefaultMaxCinderVolumes defines the maximum number of Cinder Volumes for OpenStack.
+	// OpenStack instances can have up to 16 Cinder volumes attached.
+	DefaultMaxCinderVolumes = 16
 
 	// KubeMaxPDVols defines the maximum number of PD Volumes per kubelet
 	KubeMaxPDVols = "KUBE_MAX_PD_VOLS"
@@ -111,6 +116,8 @@ const (
 	GCEPDVolumeFilterType = "GCE"
 	// AzureDiskVolumeFilterType defines the filter name for AzureDiskVolumeFilter.
 	AzureDiskVolumeFilterType = "AzureDisk"
+	// CinderVolumeFilterType defines the filter name for CinderVolumeFilter.
+	CinderVolumeFilterType = "Cinder"
 )
 
 // IMPORTANT NOTE for predicate developers:
@@ -132,8 +139,9 @@ var (
 		MatchNodeSelectorPred, PodFitsResourcesPred, NoDiskConflictPred,
 		PodToleratesNodeTaintsPred, PodToleratesNodeNoExecuteTaintsPred, CheckNodeLabelPresencePred,
 		CheckServiceAffinityPred, MaxEBSVolumeCountPred, MaxGCEPDVolumeCountPred,
-		MaxAzureDiskVolumeCountPred, CheckVolumeBindingPred, NoVolumeZoneConflictPred,
-		CheckNodeMemoryPressurePred, CheckNodeDiskPressurePred, MatchInterPodAffinityPred}
+		MaxAzureDiskVolumeCountPred, MaxCinderVolumeCountPred, CheckVolumeBindingPred,
+		NoVolumeZoneConflictPred, CheckNodeMemoryPressurePred, CheckNodeDiskPressurePred,
+		MatchInterPodAffinityPred}
 )
 
 // NodeInfo interface represents anything that can get node object from node ID.
@@ -326,9 +334,12 @@ func NewMaxPDVolumeCountPredicate(filterName string, pvInfo PersistentVolumeInfo
 	case AzureDiskVolumeFilterType:
 		filter = AzureDiskVolumeFilter
 		maxVolumes = getMaxVols(DefaultMaxAzureDiskVolumes)
+	case CinderVolumeFilterType:
+		filter = CinderVolumeFilter
+		maxVolumes = getMaxVols(DefaultMaxCinderVolumes)
 	default:
 		glog.Fatalf("Wrong filterName, Only Support %v %v %v ", EBSVolumeFilterType,
-			GCEPDVolumeFilterType, AzureDiskVolumeFilterType)
+			GCEPDVolumeFilterType, AzureDiskVolumeFilterType, CinderVolumeFilterType)
 		return nil
 
 	}
@@ -501,6 +512,23 @@ var AzureDiskVolumeFilter = VolumeFilter{
 	FilterPersistentVolume: func(pv *v1.PersistentVolume) (string, bool) {
 		if pv.Spec.AzureDisk != nil {
 			return pv.Spec.AzureDisk.DiskName, true
+		}
+		return "", false
+	},
+}
+
+// CinderVolumeFilter is a VolumeFilter for filtering Cinder Volumes
+var CinderVolumeFilter = VolumeFilter{
+	FilterVolume: func(vol *v1.Volume) (string, bool) {
+		if vol.Cinder != nil {
+			return vol.Cinder.VolumeID, true
+		}
+		return "", false
+	},
+
+	FilterPersistentVolume: func(pv *v1.PersistentVolume) (string, bool) {
+		if pv.Spec.Cinder != nil {
+			return pv.Spec.Cinder.VolumeID, true
 		}
 		return "", false
 	},

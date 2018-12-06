@@ -74,7 +74,7 @@ var (
 	matchInterPodAffinitySet      = sets.NewString(predicates.MatchInterPodAffinityPred)
 	generalPredicatesSets         = sets.NewString(predicates.GeneralPred)
 	noDiskConflictSet             = sets.NewString(predicates.NoDiskConflictPred)
-	maxPDVolumeCountPredicateKeys = []string{predicates.MaxGCEPDVolumeCountPred, predicates.MaxAzureDiskVolumeCountPred, predicates.MaxEBSVolumeCountPred}
+	maxPDVolumeCountPredicateKeys = []string{predicates.MaxGCEPDVolumeCountPred, predicates.MaxAzureDiskVolumeCountPred, predicates.MaxEBSVolumeCountPred, predicates.MaxCinderVolumeCountPred}
 )
 
 // configFactory is the default implementation of the scheduler.Configurator interface.
@@ -441,6 +441,9 @@ func (c *configFactory) invalidatePredicatesForPv(pv *v1.PersistentVolume) {
 	}
 	if pv.Spec.AzureDisk != nil {
 		invalidPredicates.Insert(predicates.MaxAzureDiskVolumeCountPred)
+	}
+	if pv.Spec.Cinder != nil {
+		invalidPredicates.Insert(predicates.MaxCinderVolumeCountPred)
 	}
 
 	// If PV contains zone related label, it may impact cached NoVolumeZoneConflict
